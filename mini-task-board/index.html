@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mini Task Board</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Mini Task Board</h1>
+
+      <section class="card">
+        <h2>Create Task</h2>
+        <form id="task-form" class="task-form">
+          <label>
+            Title <span class="required">*</span>
+            <input id="title" name="title" type="text" required maxlength="120" placeholder="e.g. Write release notes" />
+          </label>
+
+          <label>
+            Due Date (optional)
+            <input id="dueDate" name="dueDate" type="date" />
+          </label>
+
+          <label>
+            Priority
+            <select id="priority" name="priority">
+              <option value="low">Low</option>
+              <option value="med" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+
+          <button type="submit">Add Task</button>
+          <p id="form-error" class="error" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="task-header">
+          <h2>Tasks</h2>
+          <div class="filters" role="group" aria-label="Task filters">
+            <button type="button" class="filter-btn active" data-filter="all">All</button>
+            <button type="button" class="filter-btn" data-filter="open">Open</button>
+            <button type="button" class="filter-btn" data-filter="done">Done</button>
+          </div>
+        </div>
+
+        <ul id="task-list" class="task-list"></ul>
+        <p id="empty-state" class="empty-state">No tasks yet. Add one above.</p>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
