@@ -1,19 +1,18 @@
-# Poker Tracker Lite (MVP)
+# Poker Tracker Lite
 
 Mobile-first, local web app to track poker sessions (cash + tournament), calculate profit/loss, and view lightweight analytics.
 
 ## Features
 
-- Log sessions with fields:
-  - Date
-  - Location
-  - Stake/Blinds label
-  - Buy-in
-  - Cash-out/Payout
-  - Session type (Cash or Tournament)
-  - Optional notes
+### Session logging
+- **Quick Add (mobile-first default):** date, type, buy-in, cash-out up front
+- **Optional details** in collapsible section: location, stake label, notes
 - Auto profit/loss per session (`cashOut - buyIn`)
-- Session history list with delete
+- Sticky bottom **Save Session** CTA on mobile
+- Edit existing sessions from history (not just delete)
+
+### History, filters, analytics
+- Session history list with edit + delete
 - Filter by session type: **All / Cash / Tournament**
 - Summary windows based on filtered sessions:
   - All filtered sessions
@@ -23,25 +22,29 @@ Mobile-first, local web app to track poker sessions (cash + tournament), calcula
   - Profit per session over time
   - Cumulative bankroll over time
   - Profit by stake
+
+### PWA + offline behavior
+- Web app manifest (`manifest.webmanifest`)
+- Service worker (`sw.js`) for shell/resource caching
+- Install prompt handling (`beforeinstallprompt`) with an **Install App** button
+- Offline banner + offline navigation fallback after first load
 - Local persistence via `localStorage` (no backend)
 
 ## Data resilience
 
 - Stored sessions are validated on load. If `localStorage` contains invalid JSON or a non-array payload, the app safely falls back to an empty list instead of crashing.
 - Each loaded session is sanitized to safe types/defaults (including numeric coercion for buy-in/cash-out), and profit is recalculated from sanitized values.
-- HTML escaping now safely handles `null`, `undefined`, and non-string values.
+- HTML escaping safely handles `null`, `undefined`, and non-string values.
 
 ## Tech Stack
 
 - Vanilla HTML/CSS/JS
 - Chart.js via CDN
+- PWA basics: manifest + service worker
 
 ## Run Locally
 
-### Option 1: Open directly
-Open `index.html` in your browser.
-
-### Option 2: Serve with a local static server (recommended)
+> For service worker + install behavior, use a local server (not `file://`).
 
 ```bash
 cd /Users/pinchylin/.openclaw/workspace/poker-tracker-lite
@@ -52,14 +55,17 @@ Then open: `http://localhost:8080`
 
 ## Project Files
 
-- `index.html` – UI markup
-- `styles.css` – mobile-first styling
-- `app.js` – app logic + charts + persistence
-- `README.md` – setup and usage
+- `index.html` – UI markup + PWA hooks
+- `styles.css` – mobile-first styling, sticky CTA, touch-target updates
+- `app.js` – app logic, edit flow, charts, persistence, PWA/install handling
+- `manifest.webmanifest` – install metadata
+- `sw.js` – cache + offline fallback behavior
+- `icons/icon-192.svg` – app icon
+- `icons/icon-512.svg` – app icon
 
-## Notes / Known Gaps
+## Known Gaps
 
 - No authentication or cloud sync (single-browser local storage only)
-- No edit-in-place for existing sessions (delete + re-add as workaround)
-- No advanced metrics (hourly rate, variance, BB/100, ITM%) in this MVP
 - No import/export CSV yet
+- No advanced poker metrics (hourly rate, variance, BB/100, ITM%)
+- Chart.js CDN dependency may require first online load before fully offline chart rendering

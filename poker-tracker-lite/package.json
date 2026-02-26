@@ -1,0 +1,18 @@
+{
+  "name": "poker-tracker-lite",
+  "version": "1.0.0",
+  "description": "Mobile-first, local web app to track poker sessions (cash + tournament), calculate profit/loss, and view lightweight analytics.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "linkedom": "^0.18.12"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}

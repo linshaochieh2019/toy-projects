@@ -3,19 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
     <title>Poker Tracker Lite</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
     <link rel="stylesheet" href="styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
+    <div id="offlineBanner" class="offline-banner" role="status" aria-live="polite" hidden>
+      You are offline. Existing data stays available.
+    </div>
+
     <main class="container">
       <header class="app-header">
         <h1>Poker Tracker Lite</h1>
-        <p class="sub">Local-first poker session tracker</p>
+        <p class="sub">Quick log sessions, track results, keep it local.</p>
       </header>
 
       <section class="card">
-        <h2>Log Session</h2>
+        <div class="section-head">
+          <h2 id="formTitle">Quick Add Session</h2>
+          <button type="button" id="cancelEditBtn" class="btn-secondary" hidden>Cancel Edit</button>
+        </div>
+
         <form id="sessionForm" class="form-grid">
           <label>
             Date
@@ -31,41 +43,52 @@
           </label>
 
           <label>
-            Location
-            <input type="text" id="location" placeholder="Casino / Club / Home" required />
-          </label>
-
-          <label>
-            Stake / Blinds Label
-            <input type="text" id="stake" placeholder="e.g. 1/2 NLH, $109 MTT" required />
-          </label>
-
-          <label>
             Buy-in
-            <input type="number" id="buyIn" step="0.01" min="0" required />
+            <input type="number" id="buyIn" step="0.01" min="0" required inputmode="decimal" />
           </label>
 
           <label>
             Cash-out / Payout
-            <input type="number" id="cashOut" step="0.01" min="0" required />
+            <input type="number" id="cashOut" step="0.01" min="0" required inputmode="decimal" />
           </label>
 
-          <label class="full">
-            Notes (optional)
-            <textarea id="notes" rows="3" placeholder="Any notable hands, table dynamics, mindset..."></textarea>
-          </label>
+          <details class="full advanced-fields" id="advancedFields">
+            <summary>More details (optional)</summary>
 
-          <button type="submit" class="btn-primary">Save Session</button>
+            <div class="advanced-grid">
+              <label>
+                Location
+                <input type="text" id="location" placeholder="Casino / Club / Home" />
+              </label>
+
+              <label>
+                Stake / Blinds Label
+                <input type="text" id="stake" placeholder="e.g. 1/2 NLH, $109 MTT" />
+              </label>
+
+              <label class="full">
+                Notes
+                <textarea id="notes" rows="3" placeholder="Any notable hands, table dynamics, mindset..."></textarea>
+              </label>
+            </div>
+          </details>
+
+          <button type="submit" id="saveBtn" class="btn-primary sticky-save">Save Session</button>
         </form>
       </section>
 
       <section class="card">
-        <h2>Filters & Quick Summary</h2>
+        <div class="section-head">
+          <h2>Filters & Quick Summary</h2>
+          <button type="button" id="installBtn" class="btn-secondary" hidden>Install App</button>
+        </div>
+
         <div class="filters" id="typeFilters">
           <button data-type="all" class="chip active">All</button>
           <button data-type="cash" class="chip">Cash</button>
           <button data-type="tournament" class="chip">Tournament</button>
         </div>
+
         <div class="summary-grid">
           <article>
             <h3>All Filtered</h3>
@@ -84,6 +107,7 @@
 
       <section class="card">
         <h2>Charts</h2>
+        <p id="chartsStatus" class="meta" hidden></p>
         <div class="chart-wrap"><canvas id="profitOverTimeChart"></canvas></div>
         <div class="chart-wrap"><canvas id="cumulativeBankrollChart"></canvas></div>
         <div class="chart-wrap"><canvas id="profitByStakeChart"></canvas></div>

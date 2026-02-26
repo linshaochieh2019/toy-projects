@@ -6,6 +6,13 @@ const filtersEl = document.getElementById("typeFilters");
 const summaryAllEl = document.getElementById("summaryAll");
 const summary7El = document.getElementById("summary7");
 const summary30El = document.getElementById("summary30");
+const formTitleEl = document.getElementById("formTitle");
+const saveBtnEl = document.getElementById("saveBtn");
+const cancelEditBtn = document.getElementById("cancelEditBtn");
+const advancedFieldsEl = document.getElementById("advancedFields");
+const installBtn = document.getElementById("installBtn");
+const offlineBanner = document.getElementById("offlineBanner");
+const chartsStatusEl = document.getElementById("chartsStatus");
 
 const inputs = {
   date: document.getElementById("date"),
@@ -20,9 +27,12 @@ const inputs = {
 let currentTypeFilter = "all";
 let sessions = loadSessions();
 let chartRefs = {};
+let editingSessionId = null;
+let deferredInstallPrompt = null;
 
-inputs.date.valueAsDate = new Date();
+resetFormForCreate();
 render();
+setupPwaAndOffline();
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -30,8 +40,7 @@ form.addEventListener("submit", (e) => {
   const buyIn = Number(inputs.buyIn.value);
   const cashOut = Number(inputs.cashOut.value);
 
-  const session = {
-    id: crypto.randomUUID(),
+  const baseData = {
     date: inputs.date.value,
     sessionType: inputs.sessionType.value,
     location: inputs.location.value.trim(),
@@ -40,15 +49,32 @@ form.addEventListener("submit", (e) => {
     cashOut,
     profit: cashOut - buyIn,
     notes: inputs.notes.value.trim(),
-    createdAt: Date.now(),
   };
 
-  sessions.push(session);
+  if (editingSessionId) {
+    sessions = sessions.map((s) => {
+      if (s.id !== editingSessionId) return s;
+      return {
+        ...s,
+        ...baseData,
+        updatedAt: Date.now(),
+      };
+    });
+  } else {
+    sessions.push({
+      id: crypto.randomUUID(),
+      ...baseData,
+      createdAt: Date.now(),
+    });
+  }
+
   saveSessions();
-  form.reset();
-  inputs.date.valueAsDate = new Date();
-  inputs.sessionType.value = "cash";
+  resetFormForCreate();
   render();
+});
+
+cancelEditBtn.addEventListener("click", () => {
+  resetFormForCreate();
 });
 
 filtersEl.addEventListener("click", (e) => {
@@ -91,6 +117,7 @@ function sanitizeSession(session) {
     profit: cashOut - buyIn,
     notes: typeof safe.notes === "string" ? safe.notes : "",
     createdAt: toFiniteNumber(safe.createdAt),
+    updatedAt: toFiniteNumber(safe.updatedAt),
   };
 }
 
@@ -148,10 +175,11 @@ function renderHistory(list) {
           <strong>${escapeHtml(s.date)} • ${escapeHtml(cap(s.sessionType))}</strong>
           <span class="${cls}">${money(s.profit)}</span>
         </div>
-        <div class="meta">${escapeHtml(s.location)} • ${escapeHtml(s.stake)}</div>
+        <div class="meta">${escapeHtml(s.location || "(No location)")} • ${escapeHtml(s.stake || "(No stake label)")}</div>
         <div class="meta">Buy-in ${money(s.buyIn)} → Cash-out/Payout ${money(s.cashOut)}</div>
         ${s.notes ? `<div class="meta">Notes: ${escapeHtml(s.notes)}</div>` : ""}
         <div class="row-actions">
+          <button class="edit-btn" data-edit-id="${s.id}">Edit</button>
           <button class="delete-btn" data-delete-id="${s.id}">Delete</button>
         </div>
       </article>`;
@@ -163,12 +191,52 @@ function renderHistory(list) {
       const id = btn.dataset.deleteId;
       sessions = sessions.filter((s) => s.id !== id);
       saveSessions();
+      if (editingSessionId === id) resetFormForCreate();
       render();
+    });
+  });
+
+  historyEl.querySelectorAll("[data-edit-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.editId;
+      startEdit(id);
     });
   });
 }
 
 function renderCharts(list) {
+  const chartSupported = typeof window.Chart === "function";
+  const canvases = [
+    document.getElementById("profitOverTimeChart"),
+    document.getElementById("cumulativeBankrollChart"),
+    document.getElementById("profitByStakeChart"),
+  ];
+
+  destroyCharts();
+
+  if (!chartSupported) {
+    canvases.forEach((canvas) => {
+      if (!canvas) return;
+      canvas.hidden = true;
+      if (canvas.parentElement) canvas.parentElement.hidden = true;
+    });
+    if (chartsStatusEl) {
+      chartsStatusEl.hidden = false;
+      chartsStatusEl.textContent = "Charts unavailable right now (Chart.js failed to load). Your sessions and summaries still work.";
+    }
+    return;
+  }
+
+  canvases.forEach((canvas) => {
+    if (!canvas) return;
+    canvas.hidden = false;
+    if (canvas.parentElement) canvas.parentElement.hidden = false;
+  });
+  if (chartsStatusEl) {
+    chartsStatusEl.hidden = Boolean(list.length);
+    chartsStatusEl.textContent = "Add sessions to see charts.";
+  }
+
   const labels = list.map((s) => s.date);
   const profits = list.map((s) => s.profit);
 
@@ -179,13 +247,12 @@ function renderCharts(list) {
   });
 
   const stakeMap = list.reduce((acc, s) => {
-    acc[s.stake] = (acc[s.stake] || 0) + s.profit;
+    const key = s.stake || "Unknown";
+    acc[key] = (acc[key] || 0) + s.profit;
     return acc;
   }, {});
   const stakeLabels = Object.keys(stakeMap);
   const stakeProfits = stakeLabels.map((k) => stakeMap[k]);
-
-  destroyCharts();
 
   chartRefs.profitOverTime = new Chart(document.getElementById("profitOverTimeChart"), {
     type: "bar",
@@ -264,6 +331,75 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function resetFormForCreate() {
+  editingSessionId = null;
+  form.reset();
+  inputs.date.valueAsDate = new Date();
+  inputs.sessionType.value = "cash";
+  formTitleEl.textContent = "Quick Add Session";
+  saveBtnEl.textContent = "Save Session";
+  cancelEditBtn.hidden = true;
+  advancedFieldsEl.open = false;
+}
+
+function startEdit(id) {
+  const session = sessions.find((s) => s.id === id);
+  if (!session) return;
+
+  editingSessionId = id;
+  inputs.date.value = session.date;
+  inputs.sessionType.value = session.sessionType;
+  inputs.location.value = session.location;
+  inputs.stake.value = session.stake;
+  inputs.buyIn.value = session.buyIn;
+  inputs.cashOut.value = session.cashOut;
+  inputs.notes.value = session.notes;
+
+  formTitleEl.textContent = "Edit Session";
+  saveBtnEl.textContent = "Update Session";
+  cancelEditBtn.hidden = false;
+  if (session.location || session.stake || session.notes) advancedFieldsEl.open = true;
+
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function setupPwaAndOffline() {
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(() => {
+        // no-op: app still works online without SW
+      });
+    });
+  }
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    installBtn.hidden = false;
+  });
+
+  installBtn.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installBtn.hidden = true;
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    installBtn.hidden = true;
+  });
+
+  const refreshOnlineState = () => {
+    offlineBanner.hidden = navigator.onLine;
+  };
+
+  window.addEventListener("online", refreshOnlineState);
+  window.addEventListener("offline", refreshOnlineState);
+  refreshOnlineState();
 }
 
 function render() {
